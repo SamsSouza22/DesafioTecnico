@@ -143,6 +143,51 @@ class ClubController {
         }
     }
 
+    async addMemberToClub(req, res) {
+        const { clubId } = req.params; 
+        const { userId } = req.body; 
+        try {
+            // Verifica se o clube existe
+            const club = await prismaClient.club.findUnique({
+                where: { id: clubId }
+            });
+    
+            if (!club) {
+                return res.status(404).send({ message: "Clube não encontrado." });
+            }
+    
+            // Verifica se o usuário já é membro do clube
+            const existingMember = await prismaClient.club.findFirst({
+                where: {
+                    id: clubId,
+                    members: {
+                        some: {
+                            id: userId
+                        }
+                    }
+                }
+            });
+    
+            if (existingMember) {
+                return res.status(400).send({ message: "O usuário já é membro deste clube." });
+            }
+    
+            // Adiciona o usuário ao clube
+            await prismaClient.club.update({
+                where: { id: clubId },
+                data: {
+                    members: {
+                        connect: { id: userId }
+                    }
+                }
+            });
+    
+            res.send({ message: "Usuário adicionado ao clube com sucesso." });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao adicionar usuário ao clube." });
+        }
+    }
+
     // Funções para gerenciamento dos livros de um clube
     async addBookToClub(req, res) {
         const { id } = req.params;
@@ -389,7 +434,71 @@ class ClubController {
             res.status(500).send({ message: "Erro ao excluir avaliação." });
         }
     }
-
+    // Feature de estatísticas
+    async getUserClubStatistics(req, res) {
+        const { userId } = req.params;
+    
+        try {
+            // Busca os clubes que o usuário participa
+            const clubs = await prismaClient.user
+                .findUnique({
+                    where: { id: userId },
+                    select: {
+                        clubs: {  
+                            select: {
+                                id: true,
+                                books: {
+                                    select: {
+                                        bookId: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+    
+            if (!clubs) {
+                return res.status(404).send({ message: "Usuário não encontrado." });
+            }
+    
+            // Número médio de livros por clube - somente para os clubes do usuário
+            const totalBooks = clubs.clubs.reduce((acc, club) => acc + club.books.length, 0);
+            const averageBooksPerClub = clubs.clubs.length > 0 ? totalBooks / clubs.clubs.length : 0;
+    
+            // Média de avaliações dos livros - somente para os livros dos clubes do usuário
+            const booksWithOpinions = await prismaClient.book.findMany({
+                where: {
+                    id: {
+                        in: clubs.clubs.flatMap(club => club.books.map(book => book.bookId)),
+                    }
+                },
+                select: {
+                    id: true,
+                    opinions: {
+                        select: {
+                            rating: true
+                        }
+                    }
+                }
+            });
+    
+            const totalRatings = booksWithOpinions.reduce((acc, book) => {
+                const ratingsSum = book.opinions.reduce((sum, opinion) => sum + opinion.rating, 0);
+                return acc + ratingsSum;
+            }, 0);
+    
+            const totalOpinions = booksWithOpinions.reduce((acc, book) => acc + book.opinions.length, 0);
+            const averageRating = totalOpinions > 0 ? totalRatings / totalOpinions : 0;
+    
+            // Retorna as estatísticas calculadas para os clubes do usuário
+            res.send({
+                averageBooksPerClub,
+                averageRating
+            });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao calcular as estatísticas." });
+        }
+    }
 }
 
 export default ClubController;
