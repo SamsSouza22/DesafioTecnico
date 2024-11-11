@@ -257,6 +257,52 @@ class ClubController {
         }
     }
 
+    async removeBookFromClub(req, res) {
+        const { clubId, bookId } = req.params;
+        const { creatorId } = req.body; 
+    
+        try {
+            // Verifica se o clube existe
+            const club = await prismaClient.club.findUnique({ where: { id: clubId } });
+            if (!club) {
+                return res.status(404).send({ message: "Clube não encontrado." });
+            }
+    
+            // Verifica se o usuário é o criador do clube
+            if (club.creatorId !== creatorId) {
+                return res.status(403).send({ message: "Apenas o criador do clube pode remover livros." });
+            }
+    
+            // Verifica se a associação entre o livro e o clube existe
+            const existingAssociation = await prismaClient.clubBook.findUnique({
+                where: {
+                    clubId_bookId: {
+                        clubId,
+                        bookId,
+                    }
+                },
+            });
+    
+            if (!existingAssociation) {
+                return res.status(404).send({ message: "Livro não encontrado na lista do clube." });
+            }
+    
+            // Remove o livro do clube
+            await prismaClient.clubBook.delete({
+                where: {
+                    clubId_bookId: {
+                        clubId,
+                        bookId,
+                    }
+                }
+            });
+    
+            res.send({ message: "Livro removido do clube com sucesso." });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao remover livro do clube." });
+        }
+    }
+
 
 }
 
