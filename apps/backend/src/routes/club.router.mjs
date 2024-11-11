@@ -23,6 +23,10 @@ privateRouter.delete('/api/club/:id', (req, res) =>
     clubController.deleteClub(req, res)
 );
 
+privateRouter.post('/api/user/:clubId', (req, res) =>
+    clubController.addMemberToClub(req, res)
+);
+
 privateRouter.post('/api/book/:id', (req, res) =>
     clubController.addBookToClub(req, res)
 );
@@ -41,4 +45,8 @@ privateRouter.post('/api/:clubId/books/:bookId/opinions', (req, res) =>
 
 privateRouter.delete('/api/:clubId/books/:bookId/opinions', (req, res) =>
     clubController.deleteOpinion(req, res)
+);
+
+privateRouter.get('/api/:userId/statistics', (req, res) =>
+    clubController.getUserClubStatistics(req, res)
 );
