@@ -34,3 +34,11 @@ privateRouter.put('/api/:clubId/books/:bookId', (req, res) =>
 privateRouter.delete('/api/:clubId/books/:bookId', (req, res) =>
     clubController.removeBookFromClub(req, res)
 );
+
+privateRouter.post('/api/:clubId/books/:bookId/opinions', (req, res) =>
+    clubController.addOrUpdateOpinion(req, res)
+);
+
+privateRouter.delete('/api/:clubId/books/:bookId/opinions', (req, res) =>
+    clubController.deleteOpinion(req, res)
+);

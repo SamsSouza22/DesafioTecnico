@@ -303,6 +303,92 @@ class ClubController {
         }
     }
 
+    // Funções para avaliações de livros do clube
+    async addOrUpdateOpinion(req, res) {
+        const { clubId, bookId } = req.params;
+        const { userId, text, rating } = req.body;
+    
+        try {
+            // Verifica se já existe uma avaliação para o livro e clube do usuário
+            let opinion = await prismaClient.opinion.findUnique({
+                where: {
+                    userId_clubId_bookId: {
+                        userId,
+                        clubId,
+                        bookId
+                    }
+                }
+            });
+    
+            if (opinion) {
+                // Se a avaliação já existir, atualiza os dados
+                opinion = await prismaClient.opinion.update({
+                    where: {
+                        id: opinion.id
+                    },
+                    data: {
+                        text,
+                        rating
+                    }
+                });
+                res.send({ message: "Avaliação atualizada.", opinion });
+            } else {
+                // Se a avaliação não existir, cria uma nova
+                opinion = await prismaClient.opinion.create({
+                    data: {
+                        userId,
+                        clubId,
+                        bookId,
+                        text,
+                        rating
+                    }
+                });
+                res.send({ message: "Avaliação adicionada.", opinion });
+            }
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao adicionar ou atualizar avaliação." });
+        }
+    }
+
+    async deleteOpinion(req, res) {
+        const { clubId, bookId } = req.params;
+        const { userId } = req.body;
+        try {
+            // Verifica se a avaliação existe
+            const opinion = await prismaClient.opinion.findUnique({
+                where: {
+                    userId_clubId_bookId: {
+                        userId,
+                        clubId,
+                        bookId
+                    }
+                }
+            });
+    
+            // Se a avaliação não existir, retorna erro
+            if (!opinion) {
+                return res.status(404).send({ message: "Avaliação não encontrada." });
+            }
+    
+            // Verifica se o usuário tem permissão para excluir a avaliação 
+            // (usuário que fez a opinião ou criador do clube)
+            const club = await prismaClient.club.findUnique({ where: { id: clubId } });
+            if (club.creatorId !== userId && opinion.userId !== userId) {
+                return res.status(403).send({ message: "Você não tem permissão para excluir esta avaliação." });
+            }
+    
+            // Exclui a avaliação
+            await prismaClient.opinion.delete({
+                where: {
+                    id: opinion.id
+                }
+            });
+    
+            res.send({ message: "Avaliação excluída com sucesso." });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao excluir avaliação." });
+        }
+    }
 
 }
 
