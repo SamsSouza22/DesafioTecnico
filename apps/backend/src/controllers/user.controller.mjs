@@ -36,34 +36,51 @@ class UserController {
         if (!user) {
             return res.status(404).send({ message: "Usuário não encontrado" });
         }
-
+        delete user.password;
         res.send(user);
     }
 
     async searchUsers(req, res) {
-        const { query } = req.query;
+        const { name, page = 1, pageSize = 5 } = req.query;
+        console.log(name);
 
-        if (!query) {
+        if (!name) {
             return res.status(400).send({ message: "Por favor, insira um termo de pesquisa." });
         }
 
         try {
+            const skip = (parseInt(page) - 1) * parseInt(pageSize);
+            const take = parseInt(pageSize);
+
             const users = await prismaClient.user.findMany({
                 where: {
-                    OR: [
-                        { name: { contains: query, mode: 'insensitive' } },
-                        { email: { contains: query, mode: 'insensitive' } }
-                    ]
+                    name: { contains: name }
                 },
                 select: {
                     id: true,
                     name: true,
                     email: true,
                     createdAt: true,
+                },
+                skip,
+                take,
+            });
+
+            const totalUsers = await prismaClient.user.count({
+                where: {
+                    name: { contains: name }
                 }
             });
 
-            res.send(users);
+            const totalPages = Math.ceil(totalUsers / take);
+
+            res.send({
+                users,
+                currentPage: page,
+                totalPages,
+                pageSize: take,
+                totalUsers,
+            });
         } catch (error) {
             res.status(500).send({ message: "Erro ao buscar usuários" });
         }
@@ -100,12 +117,11 @@ class UserController {
         if (!user) {
             return res.status(404).send({ message: "Usuário não encontrado" });
         }
-
         user = await prismaClient.user.update({
-            data: userSchema.parse(req.body),
+            data: req.body,
             where: { id },
         });
-
+        delete user.password;
         res.send(user);
     }
 
