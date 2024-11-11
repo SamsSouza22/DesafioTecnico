@@ -22,3 +22,7 @@ privateRouter.put('/api/club/:id', (req, res) =>
 privateRouter.delete('/api/club/:id', (req, res) =>
     clubController.deleteClub(req, res)
 );
+
+privateRouter.post('/api/book/:id', (req, res) =>
+    clubController.addBookToClub(req, res)
+);
