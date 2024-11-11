@@ -118,11 +118,16 @@ class UserController {
                 return res.status(404).send({ message: "Usuário não encontrado" });
             }
             const updatedData = userSchema.parse(req.body);
+            if (updatedData.password) {
+                const salt = await bcrypt.genSalt(10); 
+                updatedData.password = await bcrypt.hash(updatedData.password, salt);
+            }
+    
             user = await prismaClient.user.update({
                 where: { id },
                 data: updatedData,
             });
-
+    
             delete user.password;
 
             res.send(user);
