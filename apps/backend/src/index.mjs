@@ -4,7 +4,7 @@ import morgan from 'morgan';
 
 import { privateRouter, publicRouter } from './routes/routers.mjs';
 import './routes/user.router.mjs';
-
+import './routes/club.router.mjs';
 const server = express();
 
 server.use(helmet());

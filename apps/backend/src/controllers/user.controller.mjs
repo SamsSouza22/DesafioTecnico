@@ -111,19 +111,30 @@ class UserController {
 
     async updateUser(req, res) {
         const { id } = req.params;
+        try {
+            let user = await prismaClient.user.findUnique({ where: { id } });
 
-        let user = await prismaClient.user.findUnique({ where: { id } });
+            if (!user) {
+                return res.status(404).send({ message: "Usuário não encontrado" });
+            }
+            const updatedData = userSchema.parse(req.body);
+            user = await prismaClient.user.update({
+                where: { id },
+                data: updatedData,
+            });
 
-        if (!user) {
-            return res.status(404).send({ message: "Usuário não encontrado" });
+            delete user.password;
+
+            res.send(user);
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).send({ message: "Dados inválidos", errors: error.errors });
+            }
+            res.status(500).send({ message: "Erro ao atualizar usuário" });
+
         }
-        user = await prismaClient.user.update({
-            data: req.body,
-            where: { id },
-        });
-        delete user.password;
-        res.send(user);
     }
+
 
     async authUser(req, res) {
         const { email, password } = req.body;
