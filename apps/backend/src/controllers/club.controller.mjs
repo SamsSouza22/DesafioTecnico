@@ -7,6 +7,11 @@ const clubSchema = z.object({
     creatorId: z.string(),
 });
 
+const bookSchema = z.object({
+    title: z.string().min(1, { message: "Título é obrigatório" }),
+    autor: z.string().min(1, { message: "Autor é obrigatório" }),
+    yearPublication: z.number().optional(),
+});
 class ClubController {
     async createClub(req, res) {
         const clubData = clubSchema.parse(req.body);
@@ -137,6 +142,168 @@ class ClubController {
             res.status(500).send({ message: "Erro ao remover o clube" });
         }
     }
+
+    // Funções para gerenciamento dos livros de um clube
+    async addBookToClub(req, res) {
+        const { id } = req.params;
+        const { creatorId, title, autor, yearPublication } = req.body;
+
+        try {
+            const club = await prismaClient.club.findUnique({ where: { id: id } });
+            if (!club) {
+                return res.status(404).send({ message: "Clube não encontrado." });
+            }
+
+            if (club.creatorId !== creatorId) {
+                return res.status(403).send({ message: "Apenas o criador do clube pode adicionar livros." });
+            }
+
+            const validatedBook = bookSchema.parse({ title, autor, yearPublication });
+
+            // Verifica se um livro com mesmo título já existe na tabela book
+            let book = await prismaClient.book.findFirst({
+                where: { title: validatedBook.title, autor: validatedBook.autor }
+            });
+            if (!book) {
+                // Se o livro não existir, cria um novo livro
+                book = await prismaClient.book.create({
+                    data: {
+                        title: validatedBook.title,
+                        autor: validatedBook.autor,
+                        yearPublication: validatedBook.yearPublication,
+                    },
+                });
+            }
+
+            // Verifica se o livro já está no clube
+            const existingAssociation = await prismaClient.clubBook.findUnique({
+                where: {
+                    clubId_bookId: {
+                        clubId: id,
+                        bookId: book.id,
+                    }
+                },
+            });
+
+            if (existingAssociation) {
+                return res.status(400).send({ message: "O livro já está adicionado ao clube." });
+            }
+
+            // Adiciona o livro ao clube (usando tabela intermediária ClubBook)
+            await prismaClient.clubBook.create({
+                data: {
+                    clubId: id,
+                    bookId: book.id  // Garante que o livro seja associado ao clube
+                }
+            });
+
+            // Retorna todos os dados dos livros associados ao clube
+            const books = await prismaClient.clubBook.findMany({
+                where: { clubId: id },
+                select: {
+                    book: true,
+                },
+            });
+
+            res.send({ message: "Livro adicionado ao clube.", books });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao adicionar livro ao clube." });
+        }
+    }
+
+    async updateBookInClub(req, res) {
+        const { clubId, bookId } = req.params; 
+        const { creatorId, title, autor, yearPublication } = req.body; 
+    
+        try {
+            // Verifica se o clube existe
+            const club = await prismaClient.club.findUnique({ where: { id: clubId } });
+            if (!club) {
+                return res.status(404).send({ message: "Clube não encontrado." });
+            }
+    
+            // Verifica se o usuário é o criador do clube
+            if (club.creatorId !== creatorId) {
+                return res.status(403).send({ message: "Apenas o criador do clube pode atualizar os livros." });
+            }
+    
+            // Verifica se o livro está associado ao clube
+            const clubBook = await prismaClient.clubBook.findUnique({
+                where: {
+                    clubId_bookId: {
+                        clubId: clubId,
+                        bookId: bookId,
+                    }
+                },
+            });
+            if (!clubBook) {
+                return res.status(404).send({ message: "Livro não encontrado no clube." });
+            }
+    
+            // Valida e atualiza os dados do livro
+            const validatedBook = bookSchema.parse({ title, autor, yearPublication });
+            const updatedBook = await prismaClient.book.update({
+                where: { id: bookId },
+                data: {
+                    title: validatedBook.title,
+                    autor: validatedBook.autor,
+                    yearPublication: validatedBook.yearPublication,
+                }
+            });
+    
+            res.send({ message: "Livro atualizado com sucesso.", updatedBook });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao atualizar o livro no clube." });
+        }
+    }
+
+    async removeBookFromClub(req, res) {
+        const { clubId, bookId } = req.params;
+        const { creatorId } = req.body; 
+    
+        try {
+            // Verifica se o clube existe
+            const club = await prismaClient.club.findUnique({ where: { id: clubId } });
+            if (!club) {
+                return res.status(404).send({ message: "Clube não encontrado." });
+            }
+    
+            // Verifica se o usuário é o criador do clube
+            if (club.creatorId !== creatorId) {
+                return res.status(403).send({ message: "Apenas o criador do clube pode remover livros." });
+            }
+    
+            // Verifica se a associação entre o livro e o clube existe
+            const existingAssociation = await prismaClient.clubBook.findUnique({
+                where: {
+                    clubId_bookId: {
+                        clubId,
+                        bookId,
+                    }
+                },
+            });
+    
+            if (!existingAssociation) {
+                return res.status(404).send({ message: "Livro não encontrado na lista do clube." });
+            }
+    
+            // Remove o livro do clube
+            await prismaClient.clubBook.delete({
+                where: {
+                    clubId_bookId: {
+                        clubId,
+                        bookId,
+                    }
+                }
+            });
+    
+            res.send({ message: "Livro removido do clube com sucesso." });
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao remover livro do clube." });
+        }
+    }
+
+
 }
 
 export default ClubController;
