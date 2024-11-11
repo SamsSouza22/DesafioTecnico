@@ -1,0 +1,7 @@
+::1 - - [11/Nov/2024:23:34:55 +0000] "GET /api/user/b0d5a188-1967-43aa-adc9-e3b2f909551c HTTP/1.1" 401 35 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:35:17 +0000] "GET /api/user/b0d5a188-1967-43aa-adc9-e3b2f909551c HTTP/1.1" 404 38 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:36:37 +0000] "GET /api/user/183ab0ee-8118-42a0-b6eb-8263c7fc0582 HTTP/1.1" 200 173 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:38:33 +0000] "GET /api/user?name=an&page=1&pageSize=2 HTTP/1.1" 200 348 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:39:23 +0000] "POST /api/club HTTP/1.1" 201 272 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:39:56 +0000] "DELETE /api/club/0df7ef4a-4734-458b-acb4-b13f4ec8e9c3 HTTP/1.1" 403 68 "-" "PostmanRuntime/7.42.0"
+::1 - - [11/Nov/2024:23:40:34 +0000] "DELETE /api/club/0df7ef4a-4734-458b-acb4-b13f4ec8e9c3 HTTP/1.1" 200 39 "-" "PostmanRuntime/7.42.0"
