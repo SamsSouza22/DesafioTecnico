@@ -303,6 +303,52 @@ class ClubController {
         }
     }
 
+    // Funções para avaliações de livros do clube
+    async addOrUpdateOpinion(req, res) {
+        const { clubId, bookId } = req.params;
+        const { userId, text, rating } = req.body;
+    
+        try {
+            // Verifica se já existe uma avaliação para o livro e clube do usuário
+            let opinion = await prismaClient.opinion.findUnique({
+                where: {
+                    userId_clubId_bookId: {
+                        userId,
+                        clubId,
+                        bookId
+                    }
+                }
+            });
+    
+            if (opinion) {
+                // Se a avaliação já existir, atualiza os dados
+                opinion = await prismaClient.opinion.update({
+                    where: {
+                        id: opinion.id
+                    },
+                    data: {
+                        text,
+                        rating
+                    }
+                });
+                res.send({ message: "Avaliação atualizada.", opinion });
+            } else {
+                // Se a avaliação não existir, cria uma nova
+                opinion = await prismaClient.opinion.create({
+                    data: {
+                        userId,
+                        clubId,
+                        bookId,
+                        text,
+                        rating
+                    }
+                });
+                res.send({ message: "Avaliação adicionada.", opinion });
+            }
+        } catch (error) {
+            res.status(500).send({ message: "Erro ao adicionar ou atualizar avaliação." });
+        }
+    }
 
 }
 
